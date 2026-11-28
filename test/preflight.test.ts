@@ -41,7 +41,7 @@ describe('supervisor preflight', () => {
       'ok   pr-shepherd: pr-shepherd 1.2.3',
       `ok   hook-harness: ${TEST_RELAY_URL}`,
       'ok   stop: not stopped',
-      'ok   labels: 1 repo checked (automation, needs-human)',
+      'ok   labels: 1 repo checked (needs-human)',
     ])
     expect(seen.slice(0, 3)).toEqual([
       'supervisor --version',

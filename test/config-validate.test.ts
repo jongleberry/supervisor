@@ -83,6 +83,15 @@ describe('config validation', () => {
     expect(
       validateConfigData({ ...config, eventWait: { hookHarness: '0.3.5', timeout: '90s' } }),
     ).toEqual({ valid: true })
+    expect(validateConfigData({ ...config, labels: { automation: 'automation' } })).toEqual({
+      valid: true,
+    })
+    expect(
+      validateConfigData({
+        ...config,
+        labels: { automation: 'automation', needsHuman: 'needs-human' },
+      }),
+    ).toEqual({ valid: true })
     expect(validateConfigData({ ...config, sweepCap: { issues: 0 } })).toEqual({ valid: true })
     expect(validateConfigData({ ...config, sweepCap: { dispatches: 3 } })).toEqual({ valid: true })
   })

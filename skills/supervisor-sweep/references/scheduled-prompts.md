@@ -43,9 +43,10 @@ summary, and do not call `sp-record` or advance `scheduledPrompts.next`. Reposit
 3. **Dispatch:** one implementation-tier worker per run, in an isolated worktree, with
    `LOOP_RUN_ID` set to the run id. When the wrapper needs a repository-bound tool the supervisor's
    launch directory cannot provide, prompt an idle workspace agent launched in that repository
-   instead; otherwise the worker opens the draft PR with `gh pr create --draft --body-file` and
-   notes the tool was unavailable. It opens at most one draft PR with the automation label, never
-   shepherds, never merges, and reports one outcome: `draft PR`, `verified no-op`, or `incomplete`.
+   instead; otherwise the worker opens the draft PR through the `supervisor-pr` flow (`pr_create`
+   with `draft: true`, posting the provenance comment) and notes the tool was unavailable. It opens
+   at most one draft PR (with no label applied at creation), never shepherds, never merges, and
+   reports one outcome: `draft PR`, `verified no-op`, or `incomplete`.
    Issue mode opens no PR: it reports the outcome its issue wrapper defines, plus the issues it
    touched.
 4. **Review:** the supervisor session or a separate reviewer subagent at the review tier, never the

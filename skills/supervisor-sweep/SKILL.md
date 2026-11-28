@@ -67,10 +67,7 @@ Requires `@jongleberry/supervisor` 0.5.0 or newer (`pnpm add -g @jongleberry/sup
   had no handling since (found by listing the repository's open PRs and reading each one's latest
   added and removed events; handled means a new head commit or a supervisor comment, dispatch, or
   requeue after the removal's `createdAt`; a person's removal is its owner's, and a removal followed
-  by a merge is resolved, as in the failures reference). A `/fix` command (or other
-  worker dispatch) skipped because `labels.automation` is missing in its repository counts as held
-  back in the same way: post no `eyes` reaction, leave `commandsThrough` behind it, and do not treat
-  it as handled when the wait returns it, so it runs once the label exists. Held-back work,
+  by a merge is resolved, as in the failures reference). Held-back work,
   dispatches and issues alike, is taken oldest first across all phases, before any new work. Report how many
   new issues and how many dispatches were held back in the Phase H summary (and on `--dry-run`,
   report what would be held back).
@@ -118,20 +115,14 @@ newer; if it fails (or if an older CLI does not report it and `supervisor --vers
 phase. It checks `hook-harness` only when `eventWait` is configured, verifying the saved or
 environment hook-harness relay URL (`https:`, or `http:` only for loopback) and token without
 spawning `npx`; hook-harness does not need to be on `PATH`. It checks `labels` only when at least one scope is in `enforce` mode (or when `--enforce-scope <owner>`
-is passed for a [staged rollout](../supervisor-loop/references/rollout.md) pre-check) and at least
-one of `labels.automation` or `labels.needsHuman` is configured, verifying that the configured
-label(s) exist in every selected repository of those scopes. When `labels` is not configured, it
-reports `ok` (`skipped: labels not configured`). When any configured label is missing in a
-repository, `labels` reports `ok` with detail `missing: ...` (without making `supervisor preflight`
-exit 1): report the missing `<owner>/<repo>` and label names in the summary (and send one deduped
-notification on first sight), do not skip the sweep's phases globally, and never create labels
-(creating a label is left to a person). Per missing label:
-
-- Missing `labels.needsHuman`: escalation still happens in that repository without the label, and
-  the summary notes that the label was missing.
-- Missing `labels.automation`: do not dispatch workers to that repository (their PRs could not carry
-  the automation label and would drop out of Phase B triage), and report the missing label and any
-  skipped dispatches in the summary.
+is passed for a [staged rollout](../supervisor-loop/references/rollout.md) pre-check) and
+`labels.needsHuman` is configured, verifying that it exists in every selected repository of those
+scopes. When `labels.needsHuman` is not configured, it reports `ok` (`skipped: labels not
+configured`). When `labels.needsHuman` is missing in a repository, `labels` reports `ok` with detail
+`missing: ...` (without making `supervisor preflight` exit 1): report the affected `<owner>/<repo>`
+in the summary (and send one deduped notification on first sight), do not skip phases or hold back
+dispatches, and never create labels (creating a label is left to a person). Escalation still happens
+in that repository without the label, and the summary notes that the label was missing.
 
 `supervisor preflight` does not check dispatch targets or the journal server. A failed check there
 covers `supervisor`, `gh`, `pr-shepherd`, and the event-wait tool.
@@ -200,8 +191,9 @@ decision and the merge authority allows that head (step 5).
 ## Phase B - Automation PRs
 
 For each repository, run [supervisor-triage-prs](../supervisor-triage-prs/SKILL.md) on the default
-automation-label scope. Apply this extra gate to every Step 3 decision before its Step 3b exclusion
-set is built. An implementation-tier reviewer checks that the diff does both of these:
+provenance-comment scope (`supervisor pr list <owner>/<repo> --json`). Apply this extra gate to
+every Step 3 decision before its Step 3b exclusion set is built. An implementation-tier reviewer
+checks that the diff does both of these:
 
 - not change business behavior (user-visible behavior, data shape, or product logic);
 - stay bounded: a focused fix, with no new abstractions or broad rewrites, proportional to the
@@ -211,7 +203,8 @@ A PR that fails the gate, or that the reviewer is unsure about, joins the exclus
 escalated. The merge policy covers merging, not closing. Every `CLOSE` decision also joins the
 exclusion set and is escalated with its reason, so `supervisor-triage-prs` closes nothing in this
 phase. Only PRs that pass the gate get `--merge`, and each still merges only when the merge authority
-allows its head. The automation label only selects this phase's queue. It grants no merge authority.
+allows its head. The provenance comment only selects this phase's queue. It grants no merge
+authority.
 
 ## Phase C - Intake queue
 
@@ -343,9 +336,8 @@ these actions, each prefixed with `would` in a `report` scope:
 
 When `sweepCap` held back work, report the held-back counts for new issues and dispatches (by phase
 and repository, and total) so the user knows how much work waits for the next sweep. When preflight
-reported any missing `labels.automation` or `labels.needsHuman` label, list the affected
-repositories and missing labels in the summary (noting any escalation sent without
-`labels.needsHuman` and any worker dispatches skipped because `labels.automation` was missing).
+reported missing `labels.needsHuman`, list the affected repositories in the summary and note any
+escalation sent without it.
 
 Run `supervisor state sweep-done`, which sets `lastSweepAt` and releases the sweep claim, except on
 `--dry-run`, which writes no state. Return the next suggested wake delay to the loop.

@@ -202,7 +202,9 @@
       "properties": {
         "automation": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "deprecated": true,
+          "description": "Ignored; Phase B and default PR triage select open PRs by their provenance comment instead of a label."
         },
         "needsHuman": {
           "type": "string",

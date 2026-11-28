@@ -19,7 +19,7 @@ describe('supervisor preflight labels check', () => {
     expect(seen).toEqual(['supervisor --version', 'gh auth status', 'pr-shepherd --version'])
   })
 
-  it('skips as ok with no gh api calls when an enforce config omits labels', async () => {
+  it('skips as ok with no gh api calls when labels.needsHuman is omitted (even with deprecated labels.automation)', async () => {
     const omitted = await makeLoop({ labels: undefined })
     const { run, seen } = fake(GOOD)
     const result = await omitted.cli(['preflight'], run)
@@ -31,30 +31,47 @@ describe('supervisor preflight labels check', () => {
     const emptyResult = await empty.cli(['preflight'], fake(GOOD).run)
     expect(emptyResult.code).toBe(0)
     expect(emptyResult.stdout).toContain('ok   labels: skipped: labels not configured\n')
+
+    const onlyAutomation = await makeLoop({ labels: { automation: 'automation' } })
+    const autoCalls = fake(GOOD)
+    const autoResult = await onlyAutomation.cli(['preflight'], autoCalls.run)
+    expect(autoResult.code).toBe(0)
+    expect(autoResult.stdout).toContain('ok   labels: skipped: labels not configured\n')
+    expect(autoCalls.seen).toEqual([
+      'supervisor --version',
+      'gh auth status',
+      'pr-shepherd --version',
+    ])
   })
 
-  it('checks only the configured label when one of automation or needsHuman is omitted', async () => {
-    const onlyAutomation = await makeLoop({ labels: { automation: 'automation' } })
-    const autoResult = await onlyAutomation.cli(
+  it('ignores deprecated labels.automation and checks only labels.needsHuman', async () => {
+    const both = await makeLoop({
+      labels: { automation: 'automation', needsHuman: 'needs-human' },
+    })
+    let graphqlArgs: string[] = []
+    const result = await both.cli(
       ['preflight'],
       fake({
         ...GOOD,
-        ghGraphql: done(JSON.stringify({ data: { r0: { automation: { name: 'automation' } } } })),
+        ghGraphql: (args) => {
+          graphqlArgs = args
+          return done(JSON.stringify({ data: { r0: { needsHuman: { name: 'needs-human' } } } }))
+        },
       }).run,
     )
-    expect(autoResult.code).toBe(0)
-    expect(autoResult.stdout).toContain('ok   labels: 1 repo checked (automation)\n')
+    expect(result.code).toBe(0)
+    expect(result.stdout).toContain('ok   labels: 1 repo checked (needs-human)\n')
+    expect(graphqlArgs.join(' ')).not.toContain('automation')
 
-    const onlyNeedsHuman = await makeLoop({ labels: { needsHuman: 'needs-human' } })
-    const humanResult = await onlyNeedsHuman.cli(
+    const missing = await both.cli(
       ['preflight'],
       fake({
         ...GOOD,
         ghGraphql: done(JSON.stringify({ data: { r0: { needsHuman: null } } })),
       }).run,
     )
-    expect(humanResult.code).toBe(0)
-    expect(humanResult.stdout).toContain(
+    expect(missing.code).toBe(0)
+    expect(missing.stdout).toContain(
       'ok   labels: missing: example-org/example-repo (needs-human)\n',
     )
   })
@@ -68,7 +85,7 @@ describe('supervisor preflight labels check', () => {
       ghGraphql: done(
         JSON.stringify({
           data: {
-            r0: { automation: { name: 'automation' }, needsHuman: null },
+            r0: { needsHuman: null },
           },
         }),
       ),
@@ -109,16 +126,16 @@ describe('supervisor preflight labels check', () => {
       ghGraphql: done(
         JSON.stringify({
           data: {
-            r0: { automation: { name: 'automation' }, needsHuman: { name: 'needs-human' } },
-            r1: { automation: { name: 'automation' }, needsHuman: { name: 'needs-human' } },
-            r2: { automation: { name: 'automation' }, needsHuman: { name: 'needs-human' } },
+            r0: { needsHuman: { name: 'needs-human' } },
+            r1: { needsHuman: { name: 'needs-human' } },
+            r2: { needsHuman: { name: 'needs-human' } },
           },
         }),
       ),
     })
     const result = await loop.cli(['preflight'], run)
     expect(result.code).toBe(0)
-    expect(result.stdout).toContain('ok   labels: 3 repos checked (automation, needs-human)\n')
+    expect(result.stdout).toContain('ok   labels: 3 repos checked (needs-human)\n')
     expect(userCalls).toBe(1)
     expect(seen.some((cmd) => cmd.includes('users/other-user/repos?per_page=100'))).toBe(true)
   })
@@ -130,9 +147,9 @@ describe('supervisor preflight labels check', () => {
     expect(result.stdout).toContain('ok   labels: no repositories matched\n')
   })
 
-  it('reports missing labels without exiting 1 and deduplicates identical names', async () => {
+  it('reports missing labels across repositories without exiting 1', async () => {
     const loop = await makeLoop()
-    const missingBoth = await loop.cli(
+    const result = await loop.cli(
       ['preflight'],
       fake({
         ...GOOD,
@@ -140,29 +157,15 @@ describe('supervisor preflight labels check', () => {
         ghGraphql: done(
           JSON.stringify({
             data: {
-              r0: { automation: null, needsHuman: null },
-              r1: { automation: null, needsHuman: { name: 'needs-human' } },
+              r0: { needsHuman: null },
+              r1: { needsHuman: { name: 'needs-human' } },
             },
           }),
         ),
       }).run,
     )
-    expect(missingBoth.code).toBe(0)
-    expect(missingBoth.stdout).toContain(
-      'ok   labels: missing: example-org/repo-a (automation, needs-human); example-org/repo-b (automation)\n',
-    )
-
-    const sameLabel = await makeLoop({ labels: { automation: 'ops', needsHuman: 'ops' } })
-    const deduped = await sameLabel.cli(
-      ['preflight'],
-      fake({
-        ...GOOD,
-        ghRepos: done('repo-a\tfalse\n'),
-        ghGraphql: done(JSON.stringify({ data: { r0: { automation: null, needsHuman: null } } })),
-      }).run,
-    )
-    expect(deduped.code).toBe(0)
-    expect(deduped.stdout).toContain('ok   labels: missing: example-org/repo-a (ops)\n')
+    expect(result.code).toBe(0)
+    expect(result.stdout).toContain('ok   labels: missing: example-org/repo-a (needs-human)\n')
   })
 
   it('batches GraphQL label checks across more than 25 repositories', async () => {
@@ -182,7 +185,6 @@ describe('supervisor preflight labels check', () => {
         const data: Record<string, unknown> = {}
         for (const match of matches) {
           data[`r${match[1]}`] = {
-            automation: { name: 'automation' },
             needsHuman: { name: 'needs-human' },
           }
         }
@@ -192,6 +194,6 @@ describe('supervisor preflight labels check', () => {
     const result = await loop.cli(['preflight'], run)
     expect(result.code).toBe(0)
     expect(graphqlCalls).toBe(2)
-    expect(result.stdout).toContain('ok   labels: 27 repos checked (automation, needs-human)\n')
+    expect(result.stdout).toContain('ok   labels: 27 repos checked (needs-human)\n')
   })
 })

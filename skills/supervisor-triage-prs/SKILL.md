@@ -1,6 +1,6 @@
 ---
 name: supervisor-triage-prs
-description: Use when asked to triage, review, or clean up a repository's open pull requests - by number, author, label, title, or the default automation-label queue - and from supervisor-sweep Phase B. Reviews each PR, merges the good ones the merge policy allows through pr-shepherd, and closes the rest.
+description: Use when asked to triage, review, or clean up a repository's open pull requests - by number, author, label, title, or the default provenance-comment queue - and from supervisor-sweep Phase B. Reviews each PR, merges the good ones the merge policy allows through pr-shepherd, and closes the rest.
 ---
 
 # Supervisor: triage pull requests
@@ -17,11 +17,12 @@ scope: PR numbers, an author, a label, `all`, a title substring, or blank for th
 The repository adapter (a consumer wrapper skill or `AGENTS.md`) owns every repository-specific
 value. Resolve these before Step 1 and stop to ask when one this run needs is missing; never guess a
 value. The supervisor's configuration (see
-[supervisor-loop](../supervisor-loop/references/config.md)) supplies the automation label, the merge
-policy, and how a final review is requested.
+[supervisor-loop](../supervisor-loop/references/config.md)) supplies the merge policy and how a final
+review is requested.
 
-- **Automation label:** marks PRs created or readied by the supervisor or its workers. It defines
-  the default scope and grants no merge authority.
+- **Default queue:** open PRs carrying a supervisor provenance comment (one whose body begins with
+  `<!-- supervisor:provenance v1 -->`), selected by `supervisor pr list <owner>/<repo> --json`. The
+  provenance comment only defines the default scope and grants no merge authority.
 - **Orphan-issue rules:** the labels or title prefix that identify automation-created issues, and
   the label that marks intentional PR-free backlog items.
 - **Prompt-source paths:** the exact paths that may be edited from PR-creation feedback, and the
@@ -55,16 +56,15 @@ policy, and how a final review is requested.
 
 ## Step 1 - Resolve scope
 
-With no argument, target every open PR carrying the adapter's automation label, exhausting the set
-per the rules above.
+With no argument, target every open PR carrying a supervisor provenance comment (a comment whose
+body begins with `<!-- supervisor:provenance v1 -->`), paginating both pull requests and comments:
 
 ```bash
-gh pr list --repo <owner>/<repo> --state open --limit 1000 --label <automation-label> --json number,title
+supervisor pr list <owner>/<repo> --json
 ```
 
-PRs opened before the label existed need an explicit one-time backfill with
-`gh pr edit <N> --repo <owner>/<repo> --add-label <automation-label>` before they enter the default
-scope.
+PRs opened through the `supervisor-pr` flow (`pr_create` / `pr_update`) carry this comment
+automatically.
 
 With an argument, require an explicit selector and stop to ask when a bare argument is ambiguous
 (for example a word that could be an author, a label, or a title):
@@ -79,10 +79,12 @@ With an argument, require an explicit selector and stop to ask when a bare argum
   `gh pr list --repo <owner>/<repo> --state open --limit 1000 --json number,title | jq --rawfile t <text-file> '($t | rtrimstr("\n") | ascii_downcase) as $q | .[] | select(.title | ascii_downcase | contains($q))'`
 - `all`: every open PR regardless of author.
 
-**Safety: a broad or non-default scope needs confirmation.** The default automation-label query is a
-reliable machine-set signal, so proceed on it directly. For any other scope (`all`, an author, a
-title match, or another label) the set can include human-authored PRs, so always confirm the close
-list with the user before executing closes or branch deletions.
+**Safety: confirm closes for every scope.** Unlike a permission-gated label, any account that can
+comment on a public repository can post a comment beginning with `<!-- supervisor:provenance v1 -->`,
+and non-default scopes (`all`, an author, a title match, or a label) can also include human-authored
+PRs. A provenance marker alone never authorizes closing a PR or deleting its branch: always confirm
+the close list with the user before Step 5 executes closes or branch deletions (Phase B escalates
+every `CLOSE` decision and closes nothing automatically).
 
 ## Step 2 - Gather status
 

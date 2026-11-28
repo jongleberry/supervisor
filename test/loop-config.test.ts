@@ -71,9 +71,12 @@ describe('loop config loading', () => {
     const config = applyDefaults({
       ...rest,
       stateDir: '/var/state',
+      labels: { automation: 'automation', needsHuman: 'needs-human' },
       eventWait: { hookHarness: '0.3.5', timeout: '30m' },
       sweepCap: { issues: 0 },
     })
+    expect(config.labels).toEqual({ needsHuman: 'needs-human' })
+    expect(applyDefaults({ ...rest, labels: { automation: 'automation' } }).labels).toEqual({})
     expect(config.scheduledPrompts).toBeUndefined()
     expect(config.staleRuns).toEqual({ olderThan: '6h', cancelAfter: '24h' })
     expect(config.sweepCap).toEqual({ issues: 0, dispatches: 5 })
