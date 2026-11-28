@@ -110,7 +110,7 @@ Loops 1, 5 and 7 feed loop 2: a distilled theme, a repeated answer, or a recurri
 
 - **Events wake the supervisor.** It waits on GitHub events (ejections, failed default-branch runs, PR closes, Dependabot PRs, commands in comments) through [hook-harness](https://github.com/jonathanong/hook-harness), with one wait over every owner and one cursor.
 - **A fallback sweep** runs on a timer, every few hours, in case an event was missed. Nothing polls while the event wait is healthy.
-- **The journal lives in [agent-blackboard](https://github.com/jongleberry/agent-blackboard).** Agents write entries with its own tools, against JSON Schemas registered on the server. Retrospectives are entries under a retrospective schema.
+- **The journal lives in [agent-blackboard](https://github.com/jongleberry/agent-blackboard).** Agents write entries with its own tools, against JSON Schemas registered on the server.
 - **Local state** (cursors, the flake ledger, merge records) is one file the supervisor owns. It is private and never committed to a public repository.
 
 ## Surfaces
