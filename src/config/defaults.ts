@@ -2,8 +2,23 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { LoopConfig, SupervisorConfig } from './types.js'
 
+/** How many scheduled prompts a sweep runs when `scheduledPrompts.quota` is not set. */
+export const DEFAULT_PROMPT_QUOTA = 1
+
 /** How many scheduled-prompt runs state keeps when `scheduledPrompts.history` is not set. */
 export const DEFAULT_PROMPT_HISTORY = 20
+
+/** Refuse `scheduledPrompts.history < quota`, which could evict an unfinished rotation's runs. */
+export function scheduledPromptsHistoryError(
+  scheduledPrompts: SupervisorConfig['scheduledPrompts'],
+): string | undefined {
+  if (scheduledPrompts === undefined) {
+    return undefined
+  }
+  const quota = scheduledPrompts.quota ?? DEFAULT_PROMPT_QUOTA
+  const history = scheduledPrompts.history ?? DEFAULT_PROMPT_HISTORY
+  return history < quota ? `must be >= quota (${quota}), got ${history}` : undefined
+}
 
 /** Default per-sweep caps in enforce mode when `sweepCap` or either member is not set. */
 export const DEFAULT_SWEEP_CAP = { issues: 10, dispatches: 5 } as const
@@ -39,7 +54,11 @@ export function applyDefaults(raw: SupervisorConfig): LoopConfig {
     ...(scheduledPrompts === undefined
       ? {}
       : {
-          scheduledPrompts: { quota: 1, history: DEFAULT_PROMPT_HISTORY, ...scheduledPrompts },
+          scheduledPrompts: {
+            quota: DEFAULT_PROMPT_QUOTA,
+            history: DEFAULT_PROMPT_HISTORY,
+            ...scheduledPrompts,
+          },
         }),
     staleRuns: staleRuns === false ? false : { olderThan: '6h', cancelAfter: '24h', ...staleRuns },
     eventWait: {

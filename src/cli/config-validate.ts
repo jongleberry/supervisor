@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { Ajv2020, type ErrorObject, type ValidateFunction } from 'ajv/dist/2020.js'
+import { scheduledPromptsHistoryError } from '../config/defaults.js'
+import type { SupervisorConfig } from '../config/types.js'
 
 export interface ConfigValidationError {
   path: string
@@ -35,13 +37,20 @@ function formatError(error: ErrorObject): ConfigValidationError {
 
 export function validateConfigData(data: unknown): ConfigValidationResult {
   const validate = getValidator()
-  if (validate(data)) {
-    return { valid: true }
+  if (!validate(data)) {
+    return {
+      valid: false,
+      errors: validate.errors!.map(formatError),
+    }
   }
-  return {
-    valid: false,
-    errors: validate.errors!.map(formatError),
+  const historyError = scheduledPromptsHistoryError((data as SupervisorConfig).scheduledPrompts)
+  if (historyError !== undefined) {
+    return {
+      valid: false,
+      errors: [{ path: '/scheduledPrompts/history', message: historyError }],
+    }
   }
+  return { valid: true }
 }
 
 export async function validateConfigFile(filePath: string): Promise<ConfigValidationResult> {

@@ -141,4 +141,11 @@ describe('supervisor state scheduled-prompt subcommands', () => {
     expect((await loop.cli(['state', 'sp-next', '--next', 'a'])).code).toBe(0)
     expect((await loop.state()).scheduledPrompts).toEqual({ next: 'a' })
   })
+
+  it('refuses to load a config whose scheduledPrompts.history is smaller than quota', async () => {
+    const loop = await makeLoop({ scheduledPrompts: { quota: 4, history: 2 } })
+    const result = await loop.cli(['state', 'show'])
+    expect(result.code).toBe(1)
+    expect(result.stderr).toContain('/scheduledPrompts/history: must be >= quota (4), got 2')
+  })
 })
