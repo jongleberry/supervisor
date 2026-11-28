@@ -117,7 +117,7 @@ Loops 1, 5 and 7 feed loop 2: a distilled theme, a repeated answer, or a recurri
 
 | Surface          | Holds                                                                                                                                                         |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `supervisor` CLI | The supervisor's own steps: `policy check` and `policy explain`, distill classify and route, claim reconciliation, `prepush`                                  |
+| `supervisor` CLI | The supervisor's own steps: `policy check` and `policy explain`, distill and route, claim reconciliation, `prepush`                                           |
 | MCP server       | Tools for agents: `pr_create`, `pr_update`, `pr_validate`, `session_facts`, [`policy_check`](merge-policy.md#the-policy_check-mcp-tool), `coordination_check` |
 | Skills           | Procedures that are not code: the supervisor loop, the skill-feedback procedure, claims                                                                       |
 | JSON Schemas     | Journal entry shapes, registered in agent-blackboard                                                                                                          |

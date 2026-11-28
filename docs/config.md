@@ -25,6 +25,10 @@ A scope is one GitHub owner and the repositories the supervisor covers there.
 - **`mode`** is `enforce` or `report`. `enforce` runs every phase. `report` triages and reports, with no worker PRs and no merges. It suits a scope with outside contributors, where the [untrusted-text rule](guardrails.md) and the list of trusted logins carry more weight. When rolling out a new installation, start in `report` mode and move one scope to `enforce` at a time, smallest first: before switching a scope, run the preflight checks for dispatch targets and labels (`supervisor preflight --enforce-scope <owner>`) as if that scope were already in `enforce`, and approve any harness permission prompt (such as a terminal multiplexer running outside the sandbox) before editing the config. See [skills/supervisor-loop/references/rollout.md](../skills/supervisor-loop/references/rollout.md).
 - **`taxonomy`** holds a scope's own milestone and project conventions, such as which project a repository's issues belong to.
 
+## Journal distill
+
+`distill.sessionDays` is how long a session must be inactive before the journal distill treats it as finished (the distill skill's `inactiveForHours` is that many days times 24). `distill.archive` says whether distilled sessions may be archived. `distill.retroDays` is deprecated and ignored: configs that still set it load, and it should be removed.
+
 ## Who may merge
 
 `mergeAuthority` says who may merge at all, and which evaluation to trust. It does not say what a PR needs.

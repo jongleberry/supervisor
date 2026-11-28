@@ -233,7 +233,7 @@ It creates a milestone for a shared theme, never a project.
 Follow [references/journal-distill.md](references/journal-distill.md). Once per scope, it distills
 completed sessions after `retroCursor` using agent-blackboard's own distill skill and tools
 (without wrapping them), handles distill blockers without halting other phases, and in a `report`
-scope reports structural counts with only a labeled sample verified.
+scope reports the snapshot counts with only a labeled sample verified.
 
 ## Phase F - Missed code reviews
 

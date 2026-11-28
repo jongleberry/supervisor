@@ -93,7 +93,6 @@
     "updateCheckDelay": "10m"
   },
   "distill": {
-    "retroDays": 1,
     "sessionDays": 7,
     "archive": true
   }

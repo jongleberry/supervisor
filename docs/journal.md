@@ -47,8 +47,8 @@ records only the summary line and writes nothing to `escalations`.
 ### Report mode
 
 In a `report` scope nothing is filed and nothing is archived, so inspecting every partition on every
-sweep buys only a summary. The supervisor runs structural classification (`distill classify`) and
-reports the full structural counts, then inspects and verifies only a bounded sample of the newest
-eligible journal sessions, labeled as a sample in the summary (see
+sweep buys only a summary. The supervisor reports the snapshot's session and entry counts from
+`snapshot_export`, then hand-verifies only a bounded sample of at most 5 of the newest matching
+sessions per scope, labeled as a sample in the summary (see
 [journal-distill.md](../skills/supervisor-sweep/references/journal-distill.md)). It files nothing,
 archives nothing, leaves `retroCursor` unadvanced, and still removes the local snapshot.

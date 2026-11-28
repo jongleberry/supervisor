@@ -87,6 +87,12 @@ describe('config validation', () => {
     expect(validateConfigData({ ...config, sweepCap: { dispatches: 3 } })).toEqual({ valid: true })
   })
 
+  it('still accepts the deprecated distill.retroDays', () => {
+    const config = loadExampleConfig()
+    config.distill = { retroDays: 1, sessionDays: 7, archive: true }
+    expect(validateConfigData(config)).toEqual({ valid: true })
+  })
+
   it('rejects loop keys of the wrong type or with unknown members', () => {
     const config = loadExampleConfig()
     ;(config.scopes as Record<string, unknown>[])[0]!.checkoutRoot = 7
