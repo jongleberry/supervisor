@@ -1,4 +1,6 @@
 import { evaluateCondition } from './conditions.js'
+import { computeNextStep } from './evaluate-next.js'
+import { missingClassifiers } from './missing-classifiers.js'
 import { selectRulesForFile } from './discover.js'
 import {
   evaluateRuleVerdict,
@@ -6,7 +8,6 @@ import {
   maxDepth,
   ruleReviewDepth,
   strictestClaude,
-  unmetSeatsStep,
 } from './evaluate-helpers.js'
 import { matchesRulePaths, toRelativePath } from './glob.js'
 import { PROTECTED_BASELINE, isProtectedPath } from './protected.js'
@@ -18,9 +19,9 @@ import type {
   EvaluationInput,
   EvaluationResult,
   FileEvaluation,
-  NextStep,
   PolicyFile,
   ReviewDepth,
+  UnreadRule,
 } from './types.js'
 
 export function evaluatePolicies(policies: PolicyFile[], input: EvaluationInput): EvaluationResult {
@@ -34,6 +35,9 @@ export function evaluatePolicies(policies: PolicyFile[], input: EvaluationInput)
   let overallDepth: ReviewDepth | null = null
   let anyWaitingOnCodeReview = false
   let anyHardBlock = false
+  let otherHardBlock = false
+  let settledVerdict: ClaudeAction | null = null
+  const missing = new Set<string>()
   const blockReasons = new Set<string>()
 
   // A changed protected file that no rule applies to takes the baseline instead: one person, no
@@ -44,6 +48,7 @@ export function evaluatePolicies(policies: PolicyFile[], input: EvaluationInput)
     allSeats.push(...seats)
     overallVerdict = strictestClaude(overallVerdict, PROTECTED_BASELINE.claude)
     anyHardBlock = true
+    otherHardBlock = true
     blockReasons.add(
       `No rule applies to protected file '${file}': a person must approve it, and the supervisor never merges it`,
     )
@@ -79,6 +84,7 @@ export function evaluatePolicies(policies: PolicyFile[], input: EvaluationInput)
     let fileVerdict: ClaudeAction | null = null
     const fileSeats: EvaluatedSeat[] = []
     let unresolvedRuleIf = false
+    const ifNotRead: UnreadRule[] = []
 
     for (const rule of verdictRules) {
       const ruleCount = input.changedFiles.filter((f) => {
@@ -95,10 +101,17 @@ export function evaluatePolicies(policies: PolicyFile[], input: EvaluationInput)
       if (ifRes === 'unknown') {
         unresolvedRuleIf = true
         anyHardBlock = true
+        const unread = missingClassifiers(rule.if, classifiers)
+        if (unread.length > 0) {
+          ifNotRead.push({ purpose: rule.purpose, sourceFile: rule.sourceFile, missing: unread })
+          for (const name of unread) missing.add(name)
+        } else {
+          otherHardBlock = true
+        }
         blockReasons.add(`Rule '${rule.purpose}' condition could not be evaluated`)
         continue
       }
-      const { verdict, overrideIndex, waitingOnCodeReview } = evaluateRuleVerdict(
+      const { verdict, overrideIndex, waitingOnCodeReview, stoppedAt } = evaluateRuleVerdict(
         rule,
         facts,
         ruleCount,
@@ -106,6 +119,8 @@ export function evaluatePolicies(policies: PolicyFile[], input: EvaluationInput)
       )
       if (waitingOnCodeReview) anyWaitingOnCodeReview = true
       fileVerdict = strictestClaude(fileVerdict, verdict.claude)
+      if (stoppedAt) for (const name of stoppedAt.missing) missing.add(name)
+      else settledVerdict = strictestClaude(settledVerdict, verdict.claude)
       const evaluatedSeats = verdict.seats.map((s) => evaluateSeat(s, facts))
       const authorOnlySeats = evaluatedSeats.some((s) => s.authorOnly)
       if (authorOnlySeats) {
@@ -121,6 +136,7 @@ export function evaluatePolicies(policies: PolicyFile[], input: EvaluationInput)
         overrideIndex,
         waitingOnClassifier: waitingOnCodeReview,
         authorOnlySeats,
+        ...(stoppedAt ? { stoppedAt } : {}),
       })
     }
 
@@ -131,6 +147,7 @@ export function evaluatePolicies(policies: PolicyFile[], input: EvaluationInput)
       fileSeats.push(...baseline)
     } else if (noRuleApplies) {
       anyHardBlock = true
+      otherHardBlock = true
       blockReasons.add(`No rule applies to '${file}'`)
     }
     if (fileVerdict) overallVerdict = strictestClaude(overallVerdict, fileVerdict)
@@ -141,6 +158,7 @@ export function evaluatePolicies(policies: PolicyFile[], input: EvaluationInput)
       protectedBaseline: baseline !== null,
       noRuleApplies,
       unresolvedRuleIf,
+      ...(ifNotRead.length > 0 ? { ifNotRead } : {}),
       rules: applied,
       verdict: fileVerdict,
       seats: fileSeats,
@@ -149,28 +167,18 @@ export function evaluatePolicies(policies: PolicyFile[], input: EvaluationInput)
   }
 
   const unmetSeats = allSeats.filter((s) => s.remaining > 0)
-  let nextStep: NextStep
-  if (anyHardBlock) {
-    nextStep = { action: 'escalate', reason: [...blockReasons].join('; ') }
-  } else if (
-    anyWaitingOnCodeReview &&
-    (overallVerdict === 'blocks' || unmetSeats.length > 0 || overallVerdict === 'comments')
-  ) {
-    nextStep = { action: 'request_review', depth: overallDepth ?? 'standard' }
-  } else if (overallVerdict === 'blocks') {
-    nextStep = { action: 'escalate', reason: 'A matching rule blocks merge' }
-  } else if (overallVerdict !== 'approves' || uncoveredFiles.length > 0) {
-    // Only an `approves` verdict on every changed file lets the supervisor merge: `comments`, a
-    // file no rule covers, and an empty change all go to a person, whatever the seats say.
-    nextStep = {
-      action: 'escalate',
-      reason: 'Not every changed file has a rule that approves the merge',
-    }
-  } else if (unmetSeats.length > 0) {
-    nextStep = unmetSeatsStep(unmetSeats, overallDepth)
-  } else {
-    nextStep = { action: 'merge' }
-  }
+  const nextStep = computeNextStep({
+    anyHardBlock,
+    otherHardBlock,
+    blockReasons,
+    anyWaitingOnCodeReview,
+    overallVerdict,
+    settledVerdict,
+    overallDepth,
+    unmetSeats,
+    uncoveredFiles,
+    missing: [...missing],
+  })
 
   return {
     files,

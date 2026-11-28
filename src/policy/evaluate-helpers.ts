@@ -1,5 +1,6 @@
 import { extractClassifierCalls } from './condition-validate.js'
 import { evaluateCondition } from './conditions.js'
+import { missingClassifiers } from './missing-classifiers.js'
 import { DEPTH_RANK, accountMatchesList } from './people.js'
 import type {
   ClassifierResult,
@@ -10,6 +11,7 @@ import type {
   PolicyRule,
   ReviewDepth,
   SeatSet,
+  StoppedAt,
   Verdict,
 } from './types.js'
 
@@ -81,7 +83,12 @@ export function evaluateRuleVerdict(
   facts: EvaluationFacts,
   ruleFilesChanged: number,
   classifiers: Record<string, ClassifierResult>,
-): { verdict: Verdict; overrideIndex: number | null; waitingOnCodeReview: boolean } {
+): {
+  verdict: Verdict
+  overrideIndex: number | null
+  waitingOnCodeReview: boolean
+  stoppedAt?: StoppedAt
+} {
   const base = rule.verdict!
   const ctx = {
     facts,
@@ -96,7 +103,15 @@ export function evaluateRuleVerdict(
       const waitingOnCodeReview = extractClassifierCalls(ov.if).some(
         (c) => c.name === 'claude/code_review',
       )
-      return { verdict: base, overrideIndex: null, waitingOnCodeReview }
+      const unread = missingClassifiers(ov.if, classifiers)
+      // `override` counts from 1, as the report names it.
+      const stoppedAt = unread.length > 0 ? { override: i + 1, missing: unread } : undefined
+      return {
+        verdict: base,
+        overrideIndex: null,
+        waitingOnCodeReview,
+        ...(stoppedAt ? { stoppedAt } : {}),
+      }
     }
     const merged: Verdict = {
       claude: ov.verdict?.claude ?? base.claude,

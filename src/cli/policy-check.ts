@@ -1,6 +1,4 @@
 import { readFile } from 'node:fs/promises'
-import { ConfigError } from '../config/load.js'
-import { resolvePolicyFromConfig, type ResolvedPolicyConfig } from '../config/policy.js'
 import { evaluatePolicies } from '../policy/evaluate.js'
 import { FactsError, PULL_NUMBER, REPOSITORY } from '../policy/facts-gh.js'
 import type { PullFacts } from '../policy/facts.js'
@@ -16,6 +14,7 @@ import {
 } from '../policy/run-check.js'
 import type { EvaluationInput } from '../policy/types.js'
 import { isObject } from '../state/json.js'
+import { resolveCliPolicy } from './policy-resolve.js'
 import { formatHumanCheck, formatPullCheck } from './policy-format.js'
 import type { CliIo } from './run.js'
 
@@ -113,34 +112,9 @@ async function readClassifiers(path: string): Promise<ClassifiersInput> {
   return parseClassifiersData(await readJson(path, 'classifiers'))
 }
 
-function policyOverrides(args: CheckArgs) {
-  return {
-    ...(args.dir !== undefined ? { dir: args.dir } : {}),
-    ...(args.repoDir !== undefined ? { repoDir: args.repoDir } : {}),
-    supervisorPolicy: args.supervisorPolicy,
-  }
-}
-
 function inputRepository(input: EvaluationInput | PullFacts): string | undefined {
   const candidate = input.facts?.repository
   return typeof candidate === 'string' && REPOSITORY.test(candidate) ? candidate : undefined
-}
-
-async function resolveCliPolicy(
-  env: Record<string, string | undefined>,
-  cwd: string,
-  repository: string | undefined,
-  args: CheckArgs,
-): Promise<ResolvedPolicyConfig> {
-  try {
-    return await resolvePolicyFromConfig(env, cwd, repository, policyOverrides(args))
-  } catch (error) {
-    const code = (error as { cause?: { code?: string } }).cause?.code
-    if (error instanceof ConfigError && code === 'ENOENT') {
-      throw new ConfigError(`${error.message}; or pass --dir`, { cause: error })
-    }
-    throw error
-  }
 }
 
 async function checkPullRequest(args: CheckArgs, io: CliIo): Promise<number> {

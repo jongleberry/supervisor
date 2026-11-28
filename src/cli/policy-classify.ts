@@ -4,9 +4,10 @@ import { loadClassifierDef, type ClassifierOutput } from '../policy/classifier-d
 import { buildClassifierInput } from '../policy/classifier-input.js'
 import { findClassifiers, usesCodeReview } from '../policy/classify-find.js'
 import { readDiff, readHead } from '../policy/classify-gh.js'
+import { loadPolicySet } from '../policy/run-check.js'
 import { FactsError, PULL_NUMBER, REPOSITORY } from '../policy/facts-gh.js'
 import { collectClassifiers } from './policy-classify-collect.js'
-import { loadPolicies } from './policy-load.js'
+import { resolveCliPolicy } from './policy-resolve.js'
 import type { CliIo } from './run.js'
 
 /** What `classify-prepare` wrote for one classifier, or why it wrote nothing. */
@@ -61,11 +62,14 @@ async function prepare(args: ClassifyArgs, io: CliIo): Promise<number | string> 
   }
   if (!REPOSITORY.test(repository)) return `'${repository}' must look like <owner>/<repo>.`
   if (!PULL_NUMBER.test(number)) return `'${number}' must be a pull request number.`
-  const dir = args.values.get('--dir')
-  if (!dir) return '--dir is required.'
-  const repoDir = args.values.get('--repo-dir')
-  const source = { dir, supervisorPolicy: args.supervisorPolicy, ...(repoDir ? { repoDir } : {}) }
-  const policies = await loadPolicies(source, io)
+  // The directory is the one policy check resolves: the flags, else the supervisor config.
+  const source = await resolveCliPolicy(io.env, process.cwd(), repository, {
+    dir: args.values.get('--dir'),
+    repoDir: args.values.get('--repo-dir'),
+    supervisorPolicy: args.supervisorPolicy,
+  })
+  const { dir, repoDir } = source
+  const policies = await loadPolicySet(source, io.env, process.cwd())
   const found = findClassifiers(policies, (p) => (p.supervisorRoot || !repoDir ? dir : repoDir))
   const codeReview = usesCodeReview(policies)
 

@@ -35,6 +35,20 @@ export interface EvaluatedSeat extends SeatSet {
   authorOnly: boolean
 }
 
+/** Where reading a rule's overrides stopped because a classifier has no result. */
+export interface StoppedAt {
+  /** The override, counted from 1. */
+  override: number
+  missing: string[]
+}
+
+/** A rule whose own `if` could not be read because a classifier has no result. */
+export interface UnreadRule {
+  purpose: string
+  sourceFile: string
+  missing: string[]
+}
+
 export interface AppliedRuleResult {
   purpose: string
   sourceFile: string
@@ -42,6 +56,8 @@ export interface AppliedRuleResult {
   overrideIndex: number | null
   waitingOnClassifier: boolean
   authorOnlySeats: boolean
+  /** Set when a missing classifier result stopped the overrides; the rule's own verdict stands. */
+  stoppedAt?: StoppedAt
 }
 
 export interface FileEvaluation {
@@ -52,6 +68,8 @@ export interface FileEvaluation {
   protectedBaseline: boolean
   noRuleApplies: boolean
   unresolvedRuleIf: boolean
+  /** Rules whose own `if` a missing classifier result left undecided. */
+  ifNotRead?: UnreadRule[]
   rules: AppliedRuleResult[]
   verdict: ClaudeAction | null
   seats: EvaluatedSeat[]
@@ -65,6 +83,8 @@ export type NextStep =
   | { action: 'escalate'; reason: string }
   /** The policy allows the merge but pr-shepherd says the PR is not ready: run pr-shepherd. */
   | { action: 'shepherd'; reason: string }
+  /** Only classifier results that are missing keep a rule from a better verdict: collect them. */
+  | { action: 'collect_classifiers'; missing: string[] }
 
 export interface EvaluationResult {
   files: FileEvaluation[]
