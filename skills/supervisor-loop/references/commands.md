@@ -22,11 +22,9 @@ An agent delegates a PR with `/shepherd` as the [agent handoff](#agent-handoff).
   for example, `AskUserQuestion`), revise, and post the plan as a comment only after the human has
   reviewed it. Never post an unreviewed plan.
 - **`/fix` on an issue:** an implementation-tier worker in an isolated worktree opens a new PR that
-  links the issue. PRs the supervisor's workers create (this one and flake-fix PRs from
-  [failures](failures.md)) get the configured automation label at creation, so Phase B and the
-  merge authority see them. If `labels.automation` is missing in the repository, do not dispatch or
-  post an `eyes` reaction — hold the `/fix` back (see
-  [Per-sweep cap](../../supervisor-sweep/SKILL.md#rules-for-every-phase)).
+  links the issue through the `supervisor-pr` flow (`pr_create`), which posts the provenance
+  comment that selects the PR for Phase B triage. No label is applied at creation, and no `/fix`
+  dispatch is held back for a missing label.
 - **`/fix` on a PR:** the worker pushes the fix to that PR's branch, only when the branch is in the
   same repository; never push to a fork. After the push the head is new, so
   [ready and merge](ready-and-merge.md) step 5 runs again for it.
@@ -38,7 +36,7 @@ The sweep backstop finds commands the events missed:
 
 - **Window:** apply the 7-day limit per command: start at the later of `commandsThrough` and 7 days
   ago, so normal scans never exceed 7 days. Except when a `/fix` command was held back on an earlier
-  sweep (by `sweepCap.dispatches` or a missing `labels.automation` label; see
+  sweep by `sweepCap.dispatches` (see
   [Per-sweep cap](../../supervisor-sweep/SKILL.md#rules-for-every-phase)), held-back work never
   expires: widen the query start to `commandsThrough` — or, when `commandsThrough` is unset, to a
   timestamp strictly earlier than the earliest held-back `/fix` comment (for example 1 second before
@@ -62,13 +60,10 @@ The sweep backstop finds commands the events missed:
 In a scope in `report` mode, report what the command would have started; post no reaction and
 dispatch nothing. `commandsThrough` advances only when no selected repository is in `report` mode
 (see [report mode](../../supervisor-sweep/SKILL.md#rules-for-every-phase)). In `enforce` mode,
-each `/fix` dispatch counts toward `sweepCap.dispatches`; if a `/fix` command is held back (by the
-cap or a missing `labels.automation` label; see
-[Per-sweep cap](../../supervisor-sweep/SKILL.md#rules-for-every-phase)), post no `eyes` reaction on
-it, leave `commandsThrough` unadvanced, and report it as held back so the next sweep handles it.
-Because `commandsThrough` is global, a repository whose `labels.automation` label stays missing
-holds the cursor back for every repository and the search window grows until someone creates the
-label; the held-back `/fix` is reported on every sweep.
+each `/fix` dispatch counts toward `sweepCap.dispatches`; if a `/fix` command is held back by the
+cap (see [Per-sweep cap](../../supervisor-sweep/SKILL.md#rules-for-every-phase)), post no `eyes`
+reaction on it, leave `commandsThrough` unadvanced, and report it as held back so the next sweep
+handles it.
 
 ## Agent handoff
 

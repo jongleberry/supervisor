@@ -33,10 +33,12 @@ export function expandHome(value: string): string {
 
 /** Expand `~/` in the path values and fill in every documented default. */
 export function applyDefaults(raw: SupervisorConfig): LoopConfig {
-  const { scheduledPrompts, staleRuns, stateDir, eventWait, sweepCap, ...rest } = raw
+  const { scheduledPrompts, staleRuns, stateDir, eventWait, sweepCap, labels, ...rest } = raw
   const { hookHarness: _ignored, ...wait } = eventWait ?? {}
+  const { automation: _ignoredAutomation, ...activeLabels } = labels ?? {}
   return {
     ...rest,
+    ...(labels === undefined ? {} : { labels: activeLabels }),
     scopes: raw.scopes.map((scope) =>
       scope.checkoutRoot === undefined
         ? scope

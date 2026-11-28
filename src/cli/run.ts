@@ -5,6 +5,7 @@ import { validateConfigFile } from './config-validate.js'
 import { runPolicyCommand } from './policy-cmd.js'
 import { runPreflightCommand } from './preflight-cmd.js'
 import { runPrepushCommand } from './prepush-cmd.js'
+import { runPrCommand } from './pr-cmd.js'
 import { shepherdStatus } from './shepherd-status.js'
 import { runStateCommand } from './state-cmd.js'
 import { runStopCommand } from './stop-cmd.js'
@@ -64,6 +65,7 @@ Commands:
   resume                               Clear the stop switch
   preflight [--json] [--enforce-scope <owner>...]
                                        Check supervisor, config, gh, pr-shepherd, hook-harness, stop, and labels
+  pr list <owner>/<repo> [--json]      List open PRs carrying a supervisor provenance comment
   mcp                                  Start the stdio MCP server
 
 Options:
@@ -131,6 +133,9 @@ export async function runCli(argv: string[], io: CliIo = defaultCliIo): Promise<
   }
   if (command === 'preflight') {
     return await runPreflightCommand(rest, io)
+  }
+  if (command === 'pr') {
+    return await runPrCommand(rest, io)
   }
   if (command === 'mcp') {
     if (rest.length > 0) {

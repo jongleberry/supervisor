@@ -21,7 +21,7 @@ export interface PreflightReplies {
 const DEFAULT_GRAPHQL = done(
   JSON.stringify({
     data: {
-      r0: { automation: { name: 'automation' }, needsHuman: { name: 'needs-human' } },
+      r0: { needsHuman: { name: 'needs-human' } },
     },
   }),
 )

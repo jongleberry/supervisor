@@ -6,8 +6,8 @@ is not a general "mark any draft ready" tool: an agent working its own PR runs `
 
 Inputs: a PR number, `--repo <owner>/<repo>` (pass it on every `gh` command), optional `--merge`
 (only for a PR the [merge authority](merge-authority.md) may cover), and optional
-`--steer-file <path>`. The [configuration](config.md) supplies the automation label and the policy;
-stop and ask when one is missing.
+`--steer-file <path>`. The [configuration](config.md) supplies the policy;
+stop and ask when it is missing.
 
 In a scope in `report` mode, run step 1 only and report what the later steps would have done.
 
@@ -21,16 +21,9 @@ In a scope in `report` mode, run step 1 only and report what the later steps wou
    already watches the PR, so leave it.
 3. **Steer (optional).** Post the reviewed steering file as an ordinary comment with
    `gh pr comment <N> --repo <owner>/<repo> --body-file <path>`. Reject an empty file.
-4. **Mark ready and label.** Run `gh pr ready <N> --repo <owner>/<repo>` for a draft (the supervisor
-   does this itself: `pr-shepherd` marks ready only clean drafts with auto mark-ready on), then add
-   the automation label with `gh pr edit <N> --repo <owner>/<repo> --add-label <automation-label>`.
-   If `labels.automation` is missing in `--repo` (from preflight or a label check), skip adding the
-   label, leave the PR ready, report the repository and label name without creating it, and escalate
-   so it does not drop out of triage; if adding the label fails on
-   any ready PR (whether this run marked it ready or it was already ready), leave the PR ready,
-   report the failure with the repository and label name, and escalate so it does not drop out of
-   triage. Either way, a missing automation label never stops Steps 5–6 when `--merge` is set and the
-   merge authority allows the merge.
+4. **Mark ready.** Run `gh pr ready <N> --repo <owner>/<repo>` for a draft (the supervisor
+   does this itself: `pr-shepherd` marks ready only clean drafts with auto mark-ready on). Do not
+   apply any label here; Phase B selects open PRs by their supervisor provenance comment.
 5. **Check the merge authority (only with `--merge`).** Run every step of
    [before any merge](merge-authority.md#before-any-merge) for the current head, and again after new
    commits. A printed enqueue or requeue command counts as a merge. The policy check is

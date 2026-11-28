@@ -32,6 +32,12 @@ export interface EventWait {
   updateCheckDelay?: string
 }
 
+export interface Labels {
+  /** @deprecated Ignored; Phase B and default PR triage select open PRs by their provenance comment. */
+  automation?: string
+  needsHuman?: string
+}
+
 export interface SweepCap {
   issues?: number
   dispatches?: number
@@ -59,7 +65,7 @@ export interface SupervisorConfig {
   trustedLogins?: string[]
   stateDir?: string
   modelTiers?: { mechanical?: string; implementation?: string; review?: string }
-  labels?: { automation?: string; needsHuman?: string }
+  labels?: Labels
   escalationChannel?: string
   dependencyBot?: { author?: string; openPullRequestLimit?: number }
   lockfileDedupe?: { author?: string; branch?: string; workflow?: string }
@@ -84,5 +90,6 @@ export interface LoopConfig extends SupervisorConfig {
   sweepCap: Required<SweepCap>
   scheduledPrompts?: ScheduledPrompts & { quota: number; history: number }
   staleRuns: false | Required<StaleRuns>
+  labels?: Omit<Labels, 'automation'>
   eventWait: Required<Omit<EventWait, 'hookHarness'>>
 }

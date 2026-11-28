@@ -19,15 +19,14 @@ that scope were already in `enforce` mode:
 
 1. **Labels and loop checks:** run
    `supervisor preflight --enforce-scope <owner> --json` as its own command. This verifies that the
-   configured `labels.automation` and `labels.needsHuman` exist in every selected repository of
-   `<owner>` (alongside `supervisor`, `config`, `gh`, `pr-shepherd`, `hook-harness`, and `stop`).
+   configured `labels.needsHuman` exists in every selected repository of `<owner>` (alongside
+   `supervisor`, `config`, `gh`, `pr-shepherd`, `hook-harness`, and `stop`).
    - Missing labels are reported in the `labels` check detail (`missing: ...`) without making
      `supervisor preflight` exit 1, so inspect the `labels` detail line even when the command exits 0. Report the exact `<owner>/<repo>` and label name to the user; creating a label is left to a
      person and the supervisor never creates labels.
    - Missing `labels.needsHuman` does not block switching if the user accepts it: escalation still
-     happens without the label, and the summary notes that the label was missing. Missing
-     `labels.automation` skips worker dispatches to that repository (since their PRs could not carry
-     the label and would drop out of Phase B triage) and reports the missing label in the summary.
+     happens without the label, and the summary notes that the label was missing. No dispatch is
+     held back for a missing label.
 2. **Dispatch targets:** when `dispatchTargets` is configured, run its read-only check as its own
    standalone command (never chained with `&&` or pipes). This often talks to a local socket (for
    example `herdr agent list`) and may fail inside a harness sandbox with `EPERM`.

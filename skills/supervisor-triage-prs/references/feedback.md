@@ -47,9 +47,10 @@ root-cause identity on open feedback PRs:
   uncertain provenance or source set creates nothing.
 
 For a create, save the plan in the feedback issue through the `github-issue` skill; the worker
-writes the draft PR's description with the `pr-description` skill. The PR body includes the marker,
-carries the automation label, and links the feedback issue with a closing keyword. Do not ready,
-shepherd, or merge a generated or reused feedback PR in the same run.
+opens the draft PR through the `supervisor-pr` flow (`pr_create`, posting the provenance comment)
+using the `pr-description` skill. The PR body includes the marker and links the feedback issue with
+a closing keyword. Do not ready, shepherd, or merge a generated or reused feedback PR in the same
+run.
 
 ## Journal disposition
 

@@ -51,7 +51,6 @@
     "review": "strongest model"
   },
   "labels": {
-    "automation": "automation",
     "needsHuman": "needs-human"
   },
   "escalationChannel": "push notification",

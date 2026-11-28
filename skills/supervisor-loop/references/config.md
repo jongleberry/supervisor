@@ -47,7 +47,7 @@ the loop and the sweep runs once per scope.
 | `trustedLogins`     | string[]          | yes                 | The only logins whose `/shepherd`, `/plan`, and `/fix` comments the supervisor obeys.                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `stateDir`          | path              | yes                 | Holds `state.json` (with the sweep claim), the [stop file](stop-switch.md), and the event-wait result `hh-last.json`. Keep it outside every repository.                                                                                                                                                                                                                                                                                                                                                             |
 | `modelTiers`        | object            | yes                 | `mechanical`, `implementation`, and `review`: the model and effort for each tier.                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `labels`            | object            | yes                 | `automation` and `needsHuman` label names. Both must already exist in every repository acted on; preflight checks whichever are configured for scopes in `enforce` mode and reports any missing label without making preflight exit 1 or creating the label (creating a label is left to a person). Escalation still happens without `needsHuman`; repositories missing `automation` receive no worker dispatches until the label exists. `automation` selects the triage queue and is not a condition for merging. |
+| `labels`            | object            | no                  | `needsHuman` label name (added when escalating a PR or issue to a person). It must already exist in every repository acted on; preflight checks `labels.needsHuman` for scopes in `enforce` mode and reports any missing label without making preflight exit 1 or creating the label (creating a label is left to a person). Escalation still happens without `needsHuman`. An older `labels.automation` key is deprecated and ignored (Phase B and default PR triage select open PRs by their provenance comment). |
 | `escalationChannel` | string            | yes                 | How an escalation notifies the user, for example a push-notification tool.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `distill`           | object            | yes                 | `retroDays` and `sessionDays` (non-negative day counts) and `archive` (boolean: whether archiving distilled sessions is authorized).                                                                                                                                                                                                                                                                                                                                                                                |
 | `dependencyBot`     | object            | for Phase A         | `author` (for example `app/dependabot`) and `openPullRequestLimit` (the configured per-ecosystem limit; never propose raising it).                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -107,7 +107,7 @@ the loop and the sweep runs once per scope.
     "implementation": "balanced model, medium effort",
     "review": "strongest model"
   },
-  "labels": { "automation": "automation", "needsHuman": "needs-human" },
+  "labels": { "needsHuman": "needs-human" },
   "escalationChannel": "push notification",
   "dependencyBot": { "author": "app/dependabot", "openPullRequestLimit": 5 },
   "lockfileDedupe": {
@@ -206,9 +206,13 @@ All read the configuration file and need `gh`.
   report, and clear the [stop switch](stop-switch.md). While it is set, `supervisor wait`,
   `supervisor state sweep-start`, and `supervisor state merge-record` exit 3.
 - `supervisor preflight [--json] [--enforce-scope <owner>...]` checks `supervisor`, `config`, `gh`,
-  `pr-shepherd`, `hook-harness`, `stop`, and `labels` (`labels.automation` and `labels.needsHuman`
-  in every repository selected by `enforce` scopes, plus any scope owner named with
-  `--enforce-scope` for [staged rollout](rollout.md) pre-checks).
+  `pr-shepherd`, `hook-harness`, `stop`, and `labels` (`labels.needsHuman` in every repository
+  selected by `enforce` scopes, plus any scope owner named with `--enforce-scope` for
+  [staged rollout](rollout.md) pre-checks).
+- `supervisor pr list <owner>/<repo> [--json]` lists open pull requests in `<owner>/<repo>` that
+  carry a supervisor provenance comment (one whose body begins with
+  `<!-- supervisor:provenance v1 -->`), paginating both pull requests and comments. Phase B and
+  `supervisor-triage-prs`'s default scope use it to select their queue.
 - `supervisor policy check <owner>/<repo> <N> --json` reads a PR from GitHub (head, files,
   authors, approvals) and evaluates it against the configured supervisor policy and, when the
   scope's `<checkoutRoot>/<repo>` exists, the repository's own `.supervisor/approvals.yml` too

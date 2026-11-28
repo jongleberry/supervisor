@@ -13,11 +13,6 @@ interface RepoRef {
   name: string
 }
 
-interface LabelTarget {
-  alias: string
-  name: string
-}
-
 async function runGh(run: RunProcess, args: string[]): Promise<string> {
   const result = await run('gh', args, { timeoutMs: TIMEOUT_MS })
   if (result.code !== 0) {
@@ -71,22 +66,17 @@ function graphqlErrorMessage(errors: unknown): string | undefined {
 async function checkBatch(
   run: RunProcess,
   batch: readonly RepoRef[],
-  targets: readonly LabelTarget[],
+  labelName: string,
 ): Promise<string[]> {
-  const vars = targets.map((target) => `$${target.alias}:String!`)
-  const labelSelection = targets
-    .map((target) => `${target.alias}:label(name:$${target.alias}){name}`)
-    .join(' ')
+  const vars = ['$needsHuman:String!']
   const fields: string[] = []
-  const args = [
-    'api',
-    'graphql',
-    ...targets.flatMap((target) => ['-f', `${target.alias}=${target.name}`]),
-  ]
+  const args = ['api', 'graphql', '-f', `needsHuman=${labelName}`]
   for (let i = 0; i < batch.length; i += 1) {
     const repo = batch[i]!
     vars.push(`$o${i}:String!`, `$n${i}:String!`)
-    fields.push(`r${i}:repository(owner:$o${i},name:$n${i}){${labelSelection}}`)
+    fields.push(
+      `r${i}:repository(owner:$o${i},name:$n${i}){needsHuman:label(name:$needsHuman){name}}`,
+    )
     args.push('-f', `o${i}=${repo.owner}`, '-f', `n${i}=${repo.name}`)
   }
   args.splice(2, 0, '-f', `query=query(${vars.join(',')}){${fields.join(' ')}}`)
@@ -116,23 +106,17 @@ async function checkBatch(
     if (!isObject(entry)) {
       throw new Error(`repository ${repo.owner}/${repo.name} not found in GraphQL response`)
     }
-    const missingForRepo: string[] = []
-    for (const target of targets) {
-      if (!isObject(entry[target.alias]) && !missingForRepo.includes(target.name)) {
-        missingForRepo.push(target.name)
-      }
-    }
-    if (missingForRepo.length > 0) {
-      missing.push(`${repo.owner}/${repo.name} (${missingForRepo.join(', ')})`)
+    if (!isObject(entry.needsHuman)) {
+      missing.push(`${repo.owner}/${repo.name} (${labelName})`)
     }
   }
   return missing
 }
 
 /**
- * Verify that configured `labels.automation` and `labels.needsHuman` exist in every repository
- * selected by scopes in `enforce` mode (plus any owner named with `--enforce-scope` for pre-switch
- * rollout checks). When `labels` is not configured, the check is skipped as ok. Missing labels are
+ * Verify that configured `labels.needsHuman` exists in every repository selected by scopes in
+ * `enforce` mode (plus any owner named with `--enforce-scope` for pre-switch rollout checks).
+ * When `labels.needsHuman` is not configured, the check is skipped as ok. Missing labels are
  * reported in the detail with `ok: true` so preflight does not exit 1; creating labels is left to
  * a person.
  */
@@ -160,15 +144,8 @@ export async function checkLabels(
   if (enforced.length === 0) {
     return { name, ok: true, detail: 'skipped: no scopes in enforce mode' }
   }
-  const targets: LabelTarget[] = [
-    ...(loaded.config.labels?.automation !== undefined
-      ? [{ alias: 'automation', name: loaded.config.labels.automation }]
-      : []),
-    ...(loaded.config.labels?.needsHuman !== undefined
-      ? [{ alias: 'needsHuman', name: loaded.config.labels.needsHuman }]
-      : []),
-  ]
-  if (targets.length === 0) {
+  const needsHuman = loaded.config.labels?.needsHuman
+  if (needsHuman === undefined) {
     return { name, ok: true, detail: 'skipped: labels not configured' }
   }
   if (!ghOk) {
@@ -182,17 +159,16 @@ export async function checkLabels(
     const missing: string[] = []
     for (let i = 0; i < repos.length; i += LABEL_BATCH_SIZE) {
       const batch = repos.slice(i, i + LABEL_BATCH_SIZE)
-      missing.push(...(await checkBatch(run, batch, targets)))
+      missing.push(...(await checkBatch(run, batch, needsHuman)))
     }
     if (missing.length > 0) {
       return { name, ok: true, detail: `missing: ${missing.join('; ')}` }
     }
     const noun = repos.length === 1 ? 'repo' : 'repos'
-    const checkedNames = [...new Set(targets.map((target) => target.name))]
     return {
       name,
       ok: true,
-      detail: `${repos.length} ${noun} checked (${checkedNames.join(', ')})`,
+      detail: `${repos.length} ${noun} checked (${needsHuman})`,
     }
   } catch (error) {
     return { name, ok: false, detail: firstLine((error as Error).message) }
