@@ -165,4 +165,6 @@ export type {
   EvaluationResult,
   FileEvaluation,
   NextStep,
+  StoppedAt,
+  UnreadRule,
 } from './eval-types.js'

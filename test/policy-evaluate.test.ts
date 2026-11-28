@@ -175,7 +175,7 @@ rules:
 
     const unresolved = evaluatePolicies([policy], { changedFiles: ['lib/a.ts'] })
     expect(unresolved.files[0]!.unresolvedRuleIf).toBe(true)
-    expect(unresolved.nextStep.action).toBe('escalate')
+    expect(unresolved.nextStep).toEqual({ action: 'collect_classifiers', missing: ['repo/gate'] })
 
     const blocked = evaluatePolicies([policy], { changedFiles: ['frozen/a.ts'] })
     expect(blocked.verdict).toBe('blocks')

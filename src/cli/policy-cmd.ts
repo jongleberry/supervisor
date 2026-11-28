@@ -13,12 +13,12 @@ const POLICY_HELP = `Usage:
                           [--classifiers <json>] [--print-input] [--repo-dir <checkout>]
   supervisor policy check [--dir <dir>] --input <json> [--supervisor-policy] [--json]
                           [--repo-dir <checkout>]
-  supervisor policy classify-prepare <owner>/<repo> <pr> --dir <dir> --out <out dir>
+  supervisor policy classify-prepare <owner>/<repo> <pr> [--dir <dir>] --out <out dir>
                           [--supervisor-policy] [--repo-dir <checkout>]
   supervisor policy classify-collect --out <out dir> [--reviewer <account>]
 
 classify-prepare reads the pull request's head and diff with \`gh api\`, finds the repo/<name>
-classifiers the policies in <dir> name, and writes for each one input file <out dir>/<name>.md
+classifiers the policies in <dir> name (--dir resolves as for check), and writes for each one input file <out dir>/<name>.md
 (its question and the diff, nothing else about the pull request) and the path its answer goes to.
 It prints <out dir>/manifest.json, and sets codeReview: true when any policy names
 claude/code_review. A classifier whose definition cannot be loaded is listed with its error and gets
@@ -41,7 +41,7 @@ and every unmet seat names only bots, the next step is request_review: request a
 the head. An unmet seat a person or team can fill, a verdict that does not approve, and a blocker,
 such as a draft or a closed pull request, escalate.
 
-When --dir is omitted, check resolves the policy from the supervisor configuration
+When --dir is omitted, check and classify-prepare resolve the policy from the supervisor configuration
 ($SUPERVISOR_CONFIG, else .supervisor.json in the current directory): mergeAuthority.policy
 resolved against the config file's real path (as the supervisor policy), and—unless --repo-dir is
 passed—<checkoutRoot>/<repo> from the matching scope when that directory exists. Passing --dir

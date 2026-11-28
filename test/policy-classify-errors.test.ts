@@ -41,7 +41,6 @@ describe('supervisor policy classify-prepare, when it cannot go on', () => {
       ['classify-prepare', '--out', out, '--dir', DIR, 'a/b', '7', 'extra'],
       ['classify-prepare', '--out', out, '--dir', DIR, '../x', '7'],
       ['classify-prepare', '--out', out, '--dir', DIR, 'a/b', '0'],
-      ['classify-prepare', '--out', out, 'a/b', '7'],
     ]) {
       const result = await policy(args, gh.run)
       expect(result.code).toBe(2)

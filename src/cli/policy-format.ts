@@ -31,6 +31,11 @@ export function formatPoliciesOverview(policies: PolicyFile[]): string {
   return `${lines.join('\n')}\n`
 }
 
+function noResult(missing: string[]): string {
+  const verb = missing.length === 1 ? 'has' : 'have'
+  return `${missing.join(', ')} ${verb} no result (run supervisor-classify)`
+}
+
 function formatNextStep(result: EvaluationResult): string {
   if (result.nextStep.action === 'merge') return 'Next step: merge allowed'
   if (result.nextStep.action === 'request_review') {
@@ -39,6 +44,9 @@ function formatNextStep(result: EvaluationResult): string {
   }
   if (result.nextStep.action === 'shepherd') {
     return `Next step: run pr-shepherd on the pull request (${result.nextStep.reason})`
+  }
+  if (result.nextStep.action === 'collect_classifiers') {
+    return `Next step: collect classifier results (${result.nextStep.missing.join(', ')}): run supervisor-classify, then check again`
   }
   return `Next step: escalate to a person (${result.nextStep.reason})`
 }
@@ -57,6 +65,15 @@ function evaluationLines(result: EvaluationResult): string[] {
   for (const file of result.files) {
     const ruleNames = file.rules.map((r) => `${r.purpose} -> ${r.verdict.claude}`).join('; ')
     lines.push(`- ${file.file}: ${file.covered ? ruleNames || 'no rule applies' : 'uncovered'}`)
+    for (const rule of file.rules) {
+      if (rule.stoppedAt) {
+        const { override, missing } = rule.stoppedAt
+        lines.push(`  ${rule.purpose}: override ${override} not read: ${noResult(missing)}`)
+      }
+    }
+    for (const rule of file.ifNotRead ?? []) {
+      lines.push(`  ${rule.purpose}: rule condition not read: ${noResult(rule.missing)}`)
+    }
   }
   return lines
 }

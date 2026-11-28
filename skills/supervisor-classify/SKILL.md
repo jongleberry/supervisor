@@ -11,8 +11,9 @@ session never answers a classifier itself: a fresh `supervisor-classifier` subag
 final review of that head to `claude/code_review`.
 
 1. **Prepare.** Run
-   `supervisor policy classify-prepare <owner>/<repo> <N> --dir <policy dir> --out <out dir>` with
-   the same `--dir`, `--supervisor-policy` and `--repo-dir` the policy check will use. Use a fresh
+   `supervisor policy classify-prepare <owner>/<repo> <N> [--dir <policy dir>] --out <out dir>` with
+   the same `--dir`, `--supervisor-policy` and `--repo-dir` the policy check will use. With no
+   `--dir` it resolves the policy from the supervisor config, as the check does. Use a fresh
    `<out dir>`. It prints the manifest: the PR head, whether the policy names `claude/code_review`,
    and for each `repo/<name>` classifier, its `input` file, its `answer` path and its `model`. A
    classifier with an `error` has no input and no result; go on without it. If the command fails,
