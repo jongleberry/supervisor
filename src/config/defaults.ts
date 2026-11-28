@@ -33,7 +33,15 @@ export function expandHome(value: string): string {
 
 /** Expand `~/` in the path values and fill in every documented default. */
 export function applyDefaults(raw: SupervisorConfig): LoopConfig {
-  const { scheduledPrompts, staleRuns, stateDir, eventWait, sweepCap, ...rest } = raw
+  const {
+    trustedLogins: _ignoredTrustedLogins,
+    scheduledPrompts,
+    staleRuns,
+    stateDir,
+    eventWait,
+    sweepCap,
+    ...rest
+  } = raw
   const { hookHarness: _ignored, ...wait } = eventWait ?? {}
   return {
     ...rest,

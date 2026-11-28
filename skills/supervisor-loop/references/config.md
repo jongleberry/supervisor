@@ -44,7 +44,7 @@ the loop and the sweep runs once per scope.
 | ------------------- | ----------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `mergeAuthority`    | object            | yes                 | `policy` (where the supervisor policy lives: the directory that holds it as `.claude/approvals.yml`), `policyEngine` (these skills evaluate with `supervisor`; stop and ask on another value), `attendedOnly`, `hosts` and `models` (who may merge at all), and optional `requiredAlwaysHuman` (paths the supervisor policy must send to a person; empty by default). See [merge authority](merge-authority.md).                                                                                                    |
 | `finalReview`       | object            | yes                 | `request` (a list of `session` and `label`: how a final review of a PR's current head is requested; an empty list requests nothing), `label` (the label that requests it), optional `reviewer` (the reviewer's GitHub account, as `bot:<app slug>` or `<login>`, whose final review `classify-collect` maps to `claude/code_review`), and optional `status` (a command that exits 0 only when the newest final review approved that head).                                                                          |
-| `trustedLogins`     | string[]          | yes                 | The only logins whose `/shepherd`, `/plan`, and `/fix` comments the supervisor obeys.                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `trustedLogins`     | string[]          | no (deprecated)     | Deprecated and ignored. Comment commands are authorized live by collaborator permission via `supervisor auth check` (push access or higher, never a bot). Kept in the schema so existing configs still load.                                                                                                                                                                                                                                                                                                        |
 | `stateDir`          | path              | yes                 | Holds `state.json` (with the sweep claim), the [stop file](stop-switch.md), and the event-wait result `hh-last.json`. Keep it outside every repository.                                                                                                                                                                                                                                                                                                                                                             |
 | `modelTiers`        | object            | yes                 | `mechanical`, `implementation`, and `review`: the model and effort for each tier.                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `labels`            | object            | yes                 | `automation` and `needsHuman` label names. Both must already exist in every repository acted on; preflight checks whichever are configured for scopes in `enforce` mode and reports any missing label without making preflight exit 1 or creating the label (creating a label is left to a person). Escalation still happens without `needsHuman`; repositories missing `automation` receive no worker dispatches until the label exists. `automation` selects the triage queue and is not a condition for merging. |
@@ -100,7 +100,6 @@ the loop and the sweep runs once per scope.
   },
   "finalReview": { "request": ["label"], "label": "ready-for-review" },
   "harness": "claude-code",
-  "trustedLogins": ["owner-login"],
   "stateDir": "~/.supervisor-state",
   "modelTiers": {
     "mechanical": "fast model, medium effort",
@@ -178,7 +177,14 @@ rules:
 
 ## CLI commands
 
-All read the configuration file and need `gh`.
+All need `gh`; all except `supervisor auth check` read the configuration file.
+
+- `supervisor auth check <owner>/<repo> <login> [--json]` checks live whether `<login>` is
+  authorized to run comment commands (`/shepherd`, `/plan`, `/fix`) on `<owner>/<repo>` by reading
+  `GET /repos/<owner>/<repo>/collaborators/<login>/permission` through `gh api`. It allows only
+  non-bot `User` accounts with push access or higher (`write`, `maintain`, or `admin`), exits 0
+  when allowed and 1 when denied or on any API error (failing closed), reads no configuration file,
+  and stores nothing in state.
 
 - `supervisor state <subcommand>` is the only writer of `state.json`. Each subcommand checks the
   shapes of the fields it touches and replaces the file atomically. `supervisor state --help` lists

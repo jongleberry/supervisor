@@ -271,11 +271,12 @@ re-checks each open flake issue's owner there.
 ## Phase G2 - Command comments
 
 The backstop for `/shepherd`, `/plan`, and `/fix` events, run on `gap: true`, on a failed wait, and
-each full sweep. It lists the commands posted since `commandsThrough` by the configured
-`trustedLogins` and handles those with no acknowledgement, as
+each full sweep. It runs a bounded search for command comments posted since `commandsThrough`,
+authorizes each candidate live with `supervisor auth check <owner>/<repo> <login>` (push access or
+higher, never a bot), and handles authorized commands with no acknowledgement, as
 [comment commands](../supervisor-loop/references/commands.md#missed-commands-phase-g2) describes
-(the first run, the syntax, the cost, and the acknowledgement check). This covers commands missed
-while the supervisor was down.
+(the first run, the syntax, the cost, authorization, and the acknowledgement check). This covers
+commands missed while the supervisor was down.
 
 Set `commandsThrough` to the sweep start
 (`supervisor state set commandsThrough --json '"<ISO time>"'`) only after G2 succeeded for every

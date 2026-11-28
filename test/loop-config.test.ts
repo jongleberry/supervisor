@@ -1,6 +1,8 @@
-import { homedir } from 'node:os'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { applyDefaults, expandHome } from '../src/config/defaults.js'
 import { ConfigError, loadConfig, requireStateDir, resolveConfigPath } from '../src/config/load.js'
@@ -70,10 +72,12 @@ describe('loop config loading', () => {
     const { scheduledPrompts: _prompts, staleRuns: _stale, sweepCap: _cap, ...rest } = loaded.config
     const config = applyDefaults({
       ...rest,
+      trustedLogins: ['example-user'],
       stateDir: '/var/state',
       eventWait: { hookHarness: '0.3.5', timeout: '30m' },
       sweepCap: { issues: 0 },
     })
+    expect('trustedLogins' in config).toBe(false)
     expect(config.scheduledPrompts).toBeUndefined()
     expect(config.staleRuns).toEqual({ olderThan: '6h', cancelAfter: '24h' })
     expect(config.sweepCap).toEqual({ issues: 0, dispatches: 5 })
@@ -87,6 +91,21 @@ describe('loop config loading', () => {
       updateCheckDelay: '10m',
     })
     expect(requireStateDir({ path: examplePath, config })).toBe('/var/state')
+  })
+
+  it('loads a config file that still sets deprecated trustedLogins and ignores it', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'supervisor-cfg-'))
+    try {
+      const raw = JSON.parse(readFileSync(examplePath, 'utf8')) as Record<string, unknown>
+      raw.trustedLogins = ['example-user']
+      const file = join(dir, 'supervisor.json')
+      await writeFile(file, JSON.stringify(raw))
+      const loaded = await loadConfig({ SUPERVISOR_CONFIG: file }, '/unused')
+      expect(loaded.path).toBe(file)
+      expect('trustedLogins' in loaded.config).toBe(false)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   })
 
   it('names the file when it is missing, is not JSON, or breaks the schema', async () => {

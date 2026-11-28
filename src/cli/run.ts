@@ -1,6 +1,7 @@
 import { startMcpServer } from '../mcp/server.js'
 import type { ShepherdStatus } from '../policy/facts-readiness.js'
 import { runProcess, type RunProcess } from '../state/process.js'
+import { runAuthCommand } from './auth-cmd.js'
 import { validateConfigFile } from './config-validate.js'
 import { runPolicyCommand } from './policy-cmd.js'
 import { runPreflightCommand } from './preflight-cmd.js'
@@ -46,6 +47,8 @@ export const defaultCliIo: CliIo = {
 const HELP_TEXT = `Usage: supervisor <command> [options]
 
 Commands:
+  auth check <owner>/<repo> <login> [--json]
+                                       Check live whether a user may run comment commands on a repo
   config validate [path]               Validate a config JSON file (defaults to $SUPERVISOR_CONFIG)
   policy explain <dir> [path]          Explain policy rules for a repo or path
   policy check <owner>/<repo> <pr> [--dir <d>]
@@ -110,6 +113,9 @@ export async function runCli(argv: string[], io: CliIo = defaultCliIo): Promise<
   if (command === '--version' || command === '-V') {
     io.stdout(`${getVersion()}\n`)
     return 0
+  }
+  if (command === 'auth') {
+    return await runAuthCommand(rest, io)
   }
   if (command === 'config') {
     return await runConfigCommand(rest, io)

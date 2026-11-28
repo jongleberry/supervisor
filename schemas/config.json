@@ -169,6 +169,8 @@
     },
     "trustedLogins": {
       "type": "array",
+      "deprecated": true,
+      "description": "Deprecated and ignored; comment commands are authorized live by collaborator permission (push access or higher, never a bot).",
       "items": {
         "type": "string",
         "minLength": 1
