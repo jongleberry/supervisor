@@ -18,7 +18,6 @@ flowchart LR
 
 - Agents write to [agent-blackboard](https://github.com/jongleberry/agent-blackboard) with its own MCP tools. There is no wrapper.
 - Every entry names a JSON Schema registered on the server, and the server validates the entry against it. A new schema can run in shadow mode first, so it can be tested without rejecting other agents' writes.
-- A retrospective is an entry under a retrospective schema, written from verified facts about the session: commits, PRs, checks and issues closed. The MCP tool `session_facts` supplies those facts.
 
 ## Distilling
 
@@ -50,12 +49,6 @@ records only the summary line and writes nothing to `escalations`.
 In a `report` scope nothing is filed and nothing is archived, so inspecting every partition on every
 sweep buys only a summary. The supervisor runs structural classification (`distill classify`) and
 reports the full structural counts, then inspects and verifies only a bounded sample of the newest
-eligible retrospective or journal-only sessions, labeled as a sample in the summary (see
+eligible journal sessions, labeled as a sample in the summary (see
 [journal-distill.md](../skills/supervisor-sweep/references/journal-distill.md)). It files nothing,
 archives nothing, leaves `retroCursor` unadvanced, and still removes the local snapshot.
-
-## Coverage
-
-A session that hit friction and wrote nothing looks the same as a clean one. So for each merged PR an agent wrote, the supervisor checks that its session left at least one entry, or an explicit "nothing observed" record. The sweep summary reports that ratio per repository.
-
-"MCP unavailable" is a signal of its own. When an agent could not reach the journal, that gets recorded and counted rather than lost.

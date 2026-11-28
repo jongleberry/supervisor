@@ -21,8 +21,6 @@ A direct question does not test that. Asked "what should you do when a check fai
 - **A guard case** with no friction, which must produce no finding entry.
 - **A subagent case.** The child must write to its own session, never the parent's.
 
-[Journal coverage](journal.md#coverage) is the production twin of this eval: the same question, asked of real merged PRs.
-
 ## Merge classification
 
 A labelled set of PR diffs, some that merged and some that went to a person, runs through `supervisor policy check`. The label is what should have happened.

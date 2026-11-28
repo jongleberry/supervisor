@@ -64,11 +64,11 @@ large snapshot on every sweep wastes quota for a summary alone. Follow the same 
    [When the distill cannot run](#when-the-distill-cannot-run) above.
 2. Run the structural classification (`distill classify` with the shared cutoffs from
    `distill.retroDays` and `distill.sessionDays`) across the scope's partitions and report the
-   structural counts in the summary: eligible retrospective sessions, eligible stale sessions by
+   structural counts in the summary: eligible stale sessions by
    shape (checkpoint-only, journal-only, zero-entry child, zero-entry root), not-yet-eligible
    sessions, and entry-type-unresolved sessions.
 3. Hand-read and verify against the default branch only a bounded sample: at most 5 eligible
-   retrospective or journal-only sessions per scope, newest first. Hand read-only inspectors only
+   journal sessions per scope, newest first. Hand read-only inspectors only
    the partition(s) that hold those sampled sessions (never the raw snapshot) and instruct them to
    hand-read only those sampled session IDs.
 4. List the verified follow-ups that would be filed in the summary, labeled as a sample alongside the
