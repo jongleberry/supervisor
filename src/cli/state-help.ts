@@ -50,8 +50,9 @@ Subcommands:
                                           Record where an item was routed
   annotate-route --match <text> --note <text> [--issue <text>]
                                           Annotate the one routed item whose "what" contains <text>
-  sp-record --prompt <name> --run-id <id> --outcome <text> --next <name> [--pr <ref>]
-                                          Record a scheduled-prompt run and the next prompt
+  sp-record --prompt <name> --run-id <id> --outcome <text> --lap <n> --next <name> [--pr <ref>]
+                                          Record a scheduled-prompt run (with its rotation lap)
+                                          and the next prompt
   sp-next --next <name>                   Set the next scheduled prompt
   reviewed [--file <path>] [--prune-before <ISO time>]
                                           Add harvested comment ids from a

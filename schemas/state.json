@@ -38,7 +38,32 @@
     },
     "handledFailures": { "type": "object" },
     "intake": { "type": "array" },
-    "scheduledPrompts": { "type": "object" },
+    "scheduledPrompts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "next": { "type": "string", "minLength": 1 },
+        "runs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["prompt", "runId", "at", "outcome", "lap"],
+            "properties": {
+              "prompt": { "type": "string", "minLength": 1 },
+              "runId": { "type": "string", "minLength": 1 },
+              "at": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"
+              },
+              "outcome": { "type": "string", "minLength": 1 },
+              "lap": { "type": "integer", "minimum": 1 },
+              "pr": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
     "delegations": { "type": "array" },
     "routed": { "type": "array" },
     "watches": { "type": "array" },

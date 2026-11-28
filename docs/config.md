@@ -58,6 +58,13 @@ Whether a review is required is a rule in the merge policy, not a setting here.
 
 Work over either cap waits for the next sweep, the sweep summary reports how much was held back, and cursors advance only past the work that was actually done. Held-back work never expires: the next sweep's scan window starts at the held-back cursor even when that is older than the phase's usual rolling window. Setting either value to `0` holds back that kind of work while still running the rest of the sweep.
 
+## Scheduled prompts
+
+`scheduledPrompts` (optional) enables Phase G3's round-robin maintenance prompt rotation across selected `enforce`-mode repositories.
+
+- **`quota`** (number >= `0`, default `1`) is the maximum number of prompts selected in one rotation window.
+- **`history`** (integer >= `0`, default `20`) is how many completed run records `scheduledPrompts.runs` retains. It must be greater than or equal to `quota` so an interrupted rotation does not evict the lap markers Rotate needs to skip already-completed prompts; configurations with `history < quota` (including when either key uses its default) are refused when validated or loaded.
+
 ## Labels
 
 `labels` names the two labels the supervisor uses in `enforce` scopes: `automation` (marks worker PRs for the triage queue; never grants merge authority) and `needsHuman` (added when escalating a PR or issue to a person). Both must already exist in every repository acted on. `supervisor preflight` checks whichever of the two keys are configured across `enforce` scopes (and any owner passed via `--enforce-scope <owner>`); when `labels` sets neither key, the check is skipped as `ok`. If a configured label is missing in a repository, preflight reports it (`ok`, detail `missing: ...`, without exiting 1) and never creates it — creating labels is left to a person. Escalation still happens without `labels.needsHuman` (noting the missing label in the summary), while worker dispatches are skipped for any repository missing `labels.automation` because their PRs could not carry the label and would drop out of triage.

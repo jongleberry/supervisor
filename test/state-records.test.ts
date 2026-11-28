@@ -41,42 +41,6 @@ describe('supervisor state record subcommands', () => {
     expect((await loop.state()).routed[0]).toEqual({ what: 'flaky test', note: 'n', issue: 'i#1' })
   })
 
-  it('records scheduled-prompt runs, bounded by the configured history', async () => {
-    const loop = await makeLoop({ scheduledPrompts: { history: 2 } })
-    const record = (prompt: string, extra: string[] = []) =>
-      loop.cli([
-        'state',
-        'sp-record',
-        ...extra,
-        '--prompt',
-        prompt,
-        '--run-id',
-        `run-${prompt}`,
-        '--outcome',
-        'pr',
-        '--next',
-        'b',
-      ])
-    expect((await record('a')).stdout).toBe(
-      `{"recorded": {"prompt": "a", "runId": "run-a", "at": "${NOW}", "outcome": "pr"}, "next": "b"}\n`,
-    )
-    await record('b', ['--pr', 'example-org/example-repo#9'])
-    await record('c')
-    const { scheduledPrompts } = await loop.state()
-    expect(scheduledPrompts.runs.map((run: { prompt: string }) => run.prompt)).toEqual(['b', 'c'])
-    expect(scheduledPrompts.runs[0].pr).toBe('example-org/example-repo#9')
-    expect((await loop.cli(['state', 'sp-next', '--next', 'z'])).stdout).toBe('{"next": "z"}\n')
-    expect((await loop.state()).scheduledPrompts.next).toBe('z')
-  })
-
-  it('keeps twenty scheduled-prompt runs when the config sets no history', async () => {
-    const loop = await makeLoop({ scheduledPrompts: undefined })
-    await loop.seed({ scheduledPrompts: { runs: Array.from({ length: 25 }, (_, i) => i) } })
-    const args = ['--prompt', 'a', '--run-id', 'r', '--outcome', 'none', '--next', 'a']
-    await loop.cli(['state', 'sp-record', ...args])
-    expect((await loop.state()).scheduledPrompts.runs).toHaveLength(20)
-  })
-
   it('marks a sweep done', async () => {
     const loop = await makeLoop()
     expect((await loop.cli(['state', 'sweep-done'])).stdout).toBe(`{"lastSweepAt": "${NOW}"}\n`)

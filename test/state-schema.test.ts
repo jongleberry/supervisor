@@ -114,4 +114,55 @@ describe('state.json schema', () => {
     expect(FIELDS.lastSweepAt).toBe('string')
     expect(Object.keys(FIELDS)).toHaveLength(18)
   })
+
+  it('validates scheduledPrompts runs and requires a positive integer lap', async () => {
+    const loop = await makeLoop()
+    const run = {
+      prompt: 'example-org/example-repo:prompts/a.md',
+      runId: 'run-1',
+      at: '2026-01-01T00:00:00Z',
+      outcome: 'draft PR',
+      lap: 1,
+    }
+    const setPrompts = (value: unknown) =>
+      loop.cli(['state', 'set', 'scheduledPrompts', '--json', JSON.stringify(value)])
+
+    expect((await setPrompts({ next: run.prompt, runs: [run] })).code).toBe(0)
+    expect((await loop.state()).scheduledPrompts).toEqual({ next: run.prompt, runs: [run] })
+
+    const withPr = { ...run, pr: 'example-org/example-repo#12' }
+    expect((await setPrompts({ next: run.prompt, runs: [withPr] })).code).toBe(0)
+
+    const { lap: _lap, ...withoutLap } = run
+    expect((await setPrompts({ runs: [withoutLap] })).stderr).toBe(
+      refused(loop, "scheduledPrompts.runs.0 must have required property 'lap'"),
+    )
+    expect(
+      (
+        await loop.cli([
+          'state',
+          'append',
+          'scheduledPrompts.runs',
+          '--json',
+          JSON.stringify(withoutLap),
+        ])
+      ).stderr,
+    ).toBe(refused(loop, "scheduledPrompts.runs.1 must have required property 'lap'"))
+
+    expect((await setPrompts({ runs: [{ ...run, lap: 0 }] })).stderr).toBe(
+      refused(loop, 'scheduledPrompts.runs.0.lap must be >= 1'),
+    )
+    expect((await setPrompts({ runs: [{ ...run, lap: 1.5 }] })).stderr).toBe(
+      refused(loop, 'scheduledPrompts.runs.0.lap must be integer'),
+    )
+    expect((await setPrompts({ runs: [{ ...run, lap: '1' }] })).stderr).toBe(
+      refused(loop, 'scheduledPrompts.runs.0.lap must be integer'),
+    )
+    expect((await setPrompts({ runs: [{ ...run, extra: true }] })).stderr).toBe(
+      refused(loop, 'scheduledPrompts.runs.0 must NOT have additional properties ("extra")'),
+    )
+    expect((await setPrompts({ extra: true })).stderr).toBe(
+      refused(loop, 'scheduledPrompts must NOT have additional properties ("extra")'),
+    )
+  })
 })

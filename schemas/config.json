@@ -313,7 +313,8 @@
         "history": {
           "type": "integer",
           "minimum": 0,
-          "default": 20
+          "default": 20,
+          "description": "Number of completed scheduled-prompt runs to retain in state; must be >= quota (checked when the config is validated or loaded)."
         }
       }
     },

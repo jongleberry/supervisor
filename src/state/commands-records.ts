@@ -54,38 +54,6 @@ export async function annotateRoute(args: string[], ctx: StateContext): Promise<
   ctx.print(hit)
 }
 
-export async function scheduledPromptRecord(args: string[], ctx: StateContext): Promise<void> {
-  const options = { prompt: TEXT, 'run-id': TEXT, outcome: TEXT, next: TEXT, pr: TEXT }
-  const { values } = parseArgs({ args, options })
-  const entry: JsonObject = {
-    prompt: need(values.prompt, 'prompt'),
-    runId: need(values['run-id'], 'run-id'),
-    at: ctx.now(),
-    outcome: need(values.outcome, 'outcome'),
-  }
-  const next = need(values.next, 'next')
-  if (values.pr) {
-    entry.pr = values.pr
-  }
-  const state = await loadState(ctx.dir)
-  const prompts = objectField(state, 'scheduledPrompts')
-  const runs = arrayField(prompts, 'runs', 'scheduledPrompts.runs')
-  runs.push(entry)
-  prompts.runs = runs.slice(-ctx.history)
-  prompts.next = next
-  await saveState(ctx.dir, state)
-  ctx.print({ recorded: entry, next })
-}
-
-export async function scheduledPromptNext(args: string[], ctx: StateContext): Promise<void> {
-  const { values } = parseArgs({ args, options: { next: TEXT } })
-  const next = need(values.next, 'next')
-  const state = await loadState(ctx.dir)
-  objectField(state, 'scheduledPrompts').next = next
-  await saveState(ctx.dir, state)
-  ctx.print({ next })
-}
-
 export async function sweepDone(args: string[], ctx: StateContext): Promise<void> {
   parseArgs({ args, options: {} })
   const state = await loadState(ctx.dir)

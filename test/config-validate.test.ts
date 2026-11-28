@@ -125,6 +125,28 @@ describe('config validation', () => {
     }
   })
 
+  it('rejects scheduledPrompts.history smaller than quota, including defaults', () => {
+    const config = loadExampleConfig()
+    expect(validateConfigData({ ...config, scheduledPrompts: { quota: 3, history: 3 } })).toEqual({
+      valid: true,
+    })
+    expect(validateConfigData({ ...config, scheduledPrompts: { quota: 0, history: 0 } })).toEqual({
+      valid: true,
+    })
+
+    for (const [scheduledPrompts, message] of [
+      [{ quota: 4, history: 2 }, 'must be >= quota (4), got 2'],
+      [{ history: 0 }, 'must be >= quota (1), got 0'],
+      [{ quota: 25 }, 'must be >= quota (25), got 20'],
+    ] as const) {
+      const result = validateConfigData({ ...config, scheduledPrompts })
+      expect(result).toEqual({
+        valid: false,
+        errors: [{ path: '/scheduledPrompts/history', message }],
+      })
+    }
+  })
+
   it('reports file read errors at root path', async () => {
     const result = await validateConfigFile('/nonexistent/supervisor-config.json')
     expect(result.valid).toBe(false)

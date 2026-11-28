@@ -3,15 +3,8 @@ import { loadConfig, requireStateDir } from '../config/load.js'
 import { advanceHookHarness, lateReview, updateCheck } from '../state/commands-external.js'
 import { mergeRecord, mergeRecords } from '../state/commands-merge.js'
 import { appendValue, removeValue, setValue } from '../state/commands-path.js'
-import {
-  annotateRoute,
-  reviewed,
-  route,
-  scheduledPromptNext,
-  scheduledPromptRecord,
-  show,
-  sweepDone,
-} from '../state/commands-records.js'
+import { scheduledPromptNext, scheduledPromptRecord } from '../state/commands-prompts.js'
+import { annotateRoute, reviewed, route, show, sweepDone } from '../state/commands-records.js'
 import { sweepStart } from '../state/commands-sweep.js'
 import { watch } from '../state/commands-watch.js'
 import { isUsageError, UsageError, type StateContext } from '../state/context.js'
