@@ -5,15 +5,17 @@ its server. This phase turns those entries into follow-ups with agent-blackboard
 and tools, without wrapping them. How agent-blackboard exports, partitions, or bounds sessions
 belongs to agent-blackboard, not this skill.
 
-Confirm `distill.retroDays` and `distill.sessionDays` are configured before running; stop and ask
-when either is missing.
+Confirm `distill.sessionDays` is configured before running; stop and ask when it is missing.
+`distill.retroDays` is deprecated and ignored.
 
 ## Enforce scope
 
 Once per scope:
 
-1. Distill the sessions completed after `retroCursor` whose entries name that scope's repositories,
-   using the configured `distill.retroDays` and `distill.sessionDays`.
+1. Run the distill skill once for the scope with these inputs: `since` = `retroCursor` (compared
+   with each session's `lastEntryAt ?? createdAt`), `inactiveForHours` = `distill.sessionDays * 24`
+   (passed to `snapshot_export`), a repository filter naming that scope's repositories, and
+   `archive` = `distill.archive`.
 2. File the verified follow-ups through the `github-issue` skill, each in the repository it
    concerns, up to the sweep's remaining `sweepCap.issues` budget (see
    [Per-sweep cap](../SKILL.md#rules-for-every-phase)). A finding about a private repository stays
@@ -62,17 +64,13 @@ large snapshot on every sweep wastes quota for a summary alone. Follow the same 
 
 1. Export, verify, and partition the snapshot for the scope as usual. If that fails, follow
    [When the distill cannot run](#when-the-distill-cannot-run) above.
-2. Run the structural classification (`distill classify` with the shared cutoffs from
-   `distill.retroDays` and `distill.sessionDays`) across the scope's partitions and report the
-   structural counts in the summary: eligible stale sessions by
-   shape (checkpoint-only, journal-only, zero-entry child, zero-entry root), not-yet-eligible
-   sessions, and entry-type-unresolved sessions.
-3. Hand-read and verify against the default branch only a bounded sample: at most 5 eligible
-   journal sessions per scope, newest first. Hand read-only inspectors only
-   the partition(s) that hold those sampled sessions (never the raw snapshot) and instruct them to
-   hand-read only those sampled session IDs.
+2. Report the snapshot's session and entry counts from `snapshot_export` in the summary.
+3. Hand-read and verify against the default branch only a bounded sample: at most 5 of the newest
+   matching sessions per scope. Hand read-only inspectors only the partition(s) that hold those
+   sampled sessions (never the raw snapshot) and instruct them to hand-read only those sampled
+   session IDs.
 4. List the verified follow-ups that would be filed in the summary, labeled as a sample alongside the
-   full structural counts.
+   snapshot counts.
 5. File nothing, archive nothing, and do not advance `retroCursor`: a later switch to `enforce` must
    still distill and file what the snapshot held. Still remove the local snapshot and its partitions
    in cleanup.

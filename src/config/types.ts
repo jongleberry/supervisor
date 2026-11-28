@@ -72,7 +72,7 @@ export interface SupervisorConfig {
   scheduledPrompts?: ScheduledPrompts
   staleRuns?: false | StaleRuns
   eventWait?: EventWait
-  distill?: { retroDays?: number; sessionDays?: number; archive?: boolean }
+  distill?: { sessionDays?: number; archive?: boolean }
 }
 
 /** The configuration after `~/` expansion, with every documented default filled in. */

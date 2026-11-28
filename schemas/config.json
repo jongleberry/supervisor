@@ -370,6 +370,7 @@
       "additionalProperties": false,
       "properties": {
         "retroDays": {
+          "description": "Deprecated and ignored: nothing reads it. Accepted so existing configs still load. Remove it.",
           "type": "number",
           "minimum": 0
         },
