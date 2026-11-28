@@ -43,7 +43,6 @@
     "status": "review-status"
   },
   "harness": "claude-code",
-  "trustedLogins": ["example-user"],
   "stateDir": "~/.supervisor-state",
   "modelTiers": {
     "mechanical": "fast model, medium effort",

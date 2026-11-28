@@ -16,7 +16,7 @@ An incomplete report goes back to its sender with the missing fields. A complete
 
 ## Comment commands
 
-People in a configured list of trusted logins can comment a command on an issue or PR. Bots and everyone else are ignored.
+Non-bot repository collaborators with push access or higher (`write`, `maintain`, or `admin`) can comment a command on an issue or PR, checked live via `supervisor auth check <owner>/<repo> <login>`. Bots and everyone else are ignored.
 
 | Command     | On             | Does                                                                   |
 | ----------- | -------------- | ---------------------------------------------------------------------- |

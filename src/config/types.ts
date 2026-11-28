@@ -56,6 +56,7 @@ export interface SupervisorConfig {
     status?: string
   }
   harness: string
+  /** @deprecated Ignored; comment commands are authorized live by collaborator permission. */
   trustedLogins?: string[]
   stateDir?: string
   modelTiers?: { mechanical?: string; implementation?: string; review?: string }
@@ -76,7 +77,7 @@ export interface SupervisorConfig {
 }
 
 /** The configuration after `~/` expansion, with every documented default filled in. */
-export interface LoopConfig extends SupervisorConfig {
+export interface LoopConfig extends Omit<SupervisorConfig, 'trustedLogins'> {
   fallbackCron: string
   lateReviewDays: number
   fullRescanDays: number
